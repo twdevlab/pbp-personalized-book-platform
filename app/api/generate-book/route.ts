@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { getBirthChartData } from "@/lib/astro";
 import { generateBookContent } from "@/lib/claude";
 import { sendBookEmail } from "@/lib/email";
@@ -47,6 +49,7 @@ export async function POST(request: Request) {
 
     step = "pdf";
     const pdfBuffer = await generateBookPdf(bookContent, customerData);
+    const resultFile = await saveGeneratedBookPdf(pdfBuffer, customerData.fullName);
 
     step = "email";
     await sendBookEmail({
@@ -58,7 +61,9 @@ export async function POST(request: Request) {
     return NextResponse.json<GenerateBookSuccessResponse>({
       success: true,
       message:
-        "Book generated successfully. The PDF was created and the email step completed."
+        "Book generated successfully. The PDF was created and the email step completed.",
+      downloadUrl: resultFile.downloadUrl,
+      fileName: resultFile.fileName
     });
   } catch (error) {
     if (error instanceof ValidationError) {
@@ -105,6 +110,29 @@ function getPublicErrorMessage(step: WorkflowStep): string {
     default:
       return "The book generation workflow failed before it could complete.";
   }
+}
+
+async function saveGeneratedBookPdf(
+  pdfBuffer: Buffer,
+  fullName: string
+): Promise<{ downloadUrl: string; fileName: string }> {
+  const outputDirectory = path.join(process.cwd(), "public", "generated-books");
+  await mkdir(outputDirectory, { recursive: true });
+
+  const safeName = fullName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const fileName = `${safeName || "personalized-book"}-${timestamp}.pdf`;
+
+  await writeFile(path.join(outputDirectory, fileName), pdfBuffer);
+
+  return {
+    downloadUrl: `/generated-books/${fileName}`,
+    fileName
+  };
 }
 
 class ValidationError extends Error {}

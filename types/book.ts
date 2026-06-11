@@ -46,6 +46,8 @@ export type GenerateBookRequest = CustomerData;
 export type GenerateBookSuccessResponse = {
   success: true;
   message: string;
+  downloadUrl: string;
+  fileName: string;
 };
 
 export type GenerateBookErrorResponse = {

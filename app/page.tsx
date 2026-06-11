@@ -5,7 +5,7 @@ import { FormEvent, useState } from "react";
 type SubmitState =
   | { status: "idle"; message: "" }
   | { status: "loading"; message: string }
-  | { status: "success"; message: string }
+  | { status: "success"; message: string; downloadUrl: string; fileName: string }
   | { status: "error"; message: string };
 
 export default function Home() {
@@ -46,6 +46,8 @@ export default function Home() {
         success: boolean;
         message?: string;
         error?: string;
+        downloadUrl?: string;
+        fileName?: string;
       };
 
       if (!response.ok || !result.success) {
@@ -56,7 +58,9 @@ export default function Home() {
         status: "success",
         message:
           result.message ??
-          "Success. The personalized book PDF was generated and the email step completed."
+          "Success. The personalized book PDF was generated and the email step completed.",
+        downloadUrl: result.downloadUrl ?? "",
+        fileName: result.fileName ?? "personalized-book.pdf"
       });
     } catch (error) {
       setSubmitState({
@@ -175,7 +179,19 @@ export default function Home() {
               {isLoading ? "Generating..." : "Generate Personalized Book"}
             </button>
             {submitState.message ? (
-              <p className={`status ${submitState.status}`}>{submitState.message}</p>
+              <div className="result">
+                <p className={`status ${submitState.status}`}>{submitState.message}</p>
+                {submitState.status === "success" && submitState.downloadUrl ? (
+                  <a
+                    className="downloadLink"
+                    href={submitState.downloadUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open PDF
+                  </a>
+                ) : null}
+              </div>
             ) : null}
           </div>
         </form>
